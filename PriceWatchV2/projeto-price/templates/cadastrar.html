@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Produto - PriceWatch</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="page-shell">
+        <header class="page-header">
+            <div class="title-group">
+                <p class="eyebrow">Cadastro local</p>
+                <h1>Cadastrar Produto</h1>
+                <p class="tagline">
+                    Escolha um produto que já está salvo no banco. Ao cadastrar, ele passa a aparecer na home.
+                </p>
+            </div>
+        </header>
+
+        <section class="form-card">
+            <h2>Produtos disponíveis no banco</h2>
+
+            {% if produtos_disponiveis|length == 0 %}
+                <p class="empty-state">
+                    Todos os produtos salvos no banco já estão aparecendo na home.
+                </p>
+            {% else %}
+                <form method="POST" action="/cadastrar" class="product-form product-form-page">
+                    <select name="produto_id" required>
+                        <option value="">Selecione um produto</option>
+
+                        {% for produto in produtos_disponiveis %}
+                            <option value="{{ produto.id }}">
+                                {{ produto.nome }} — {{ produto.site }}
+                            </option>
+                        {% endfor %}
+                    </select>
+
+                    <button type="submit">
+                        Cadastrar e exibir na home
+                    </button>
+                </form>
+            {% endif %}
+
+            <a href="/" class="back-link">
+                Voltar para o dashboard
+            </a>
+        </section>
+    </div>
+</body>
+
+</html>

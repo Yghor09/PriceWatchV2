@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico - PriceWatch</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="page-shell">
+        <header class="page-header">
+            <div class="title-group">
+                <p class="eyebrow">Histórico de preços</p>
+                <h1>{{ produto.nome }}</h1>
+                <p class="tagline">Produto salvo no banco local — {{ produto.site }}</p>
+            </div>
+        </header>
+
+        <section class="overview-grid">
+            <article class="overview-card">
+                <p class="small-label">Preço atual</p>
+                <p class="big-value">
+                    {% if produto.preco_atual is not none %}
+                        R$ {{ '%.2f' % produto.preco_atual }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </p>
+                <p class="note">Último preço salvo no histórico.</p>
+            </article>
+
+            <article class="overview-card">
+                <p class="small-label">Menor preço</p>
+                <p class="big-value">
+                    {% if produto.menor_preco %}
+                        R$ {{ '%.2f' % produto.menor_preco.preco }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </p>
+                <p class="note">
+                    {% if produto.menor_preco %}
+                        Registrado em {{ produto.menor_preco.data_completa }}.
+                    {% else %}
+                        Sem histórico salvo.
+                    {% endif %}
+                </p>
+            </article>
+        </section>
+
+        <section class="overview-grid">
+            <article class="overview-card">
+                <p class="small-label">Maior preço</p>
+                <p class="big-value">
+                    {% if produto.maior_preco %}
+                        R$ {{ '%.2f' % produto.maior_preco.preco }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </p>
+                <p class="note">
+                    {% if produto.maior_preco %}
+                        Registrado em {{ produto.maior_preco.data_completa }}.
+                    {% else %}
+                        Sem histórico salvo.
+                    {% endif %}
+                </p>
+            </article>
+
+            <article class="overview-card">
+                <p class="small-label">Origem</p>
+                <p class="big-value">Banco</p>
+                <p class="note">Não há consulta em sites externos.</p>
+            </article>
+        </section>
+
+        <section class="chart-card">
+            <h2>Gráfico do histórico</h2>
+            <p class="chart-info">Janeiro a Junho + preço atual salvo no banco.</p>
+
+            {% if produto.historico|length > 0 %}
+                <canvas id="historyChart"></canvas>
+            {% else %}
+                <p class="empty-state">Este produto ainda não tem histórico salvo.</p>
+            {% endif %}
+        </section>
+
+        <section class="comparison-card">
+            <h2>Histórico detalhado</h2>
+
+            {% if produto.historico|length > 0 %}
+                <div class="offers-list">
+                    {% for item in produto.historico %}
+                        <div class="offer-row">
+                            <span>{{ item.label }} — {{ item.data_completa }}</span>
+                            <strong>R$ {{ '%.2f' % item.preco }}</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="empty-state">Nenhum preço cadastrado no histórico.</p>
+            {% endif %}
+
+            <a href="/" class="back-link">Voltar para o dashboard</a>
+        </section>
+    </div>
+
+    <script>
+        const produto = {{ produto|tojson }};
+        let historyChart = null;
+
+        function formatarMoeda(valor) {
+            return 'R$ ' + Number(valor).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        if (produto.precos && produto.precos.length > 0) {
+            const ctx = document.getElementById('historyChart');
+
+            historyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: produto.labels,
+                    datasets: [{
+                        label: 'Preço no banco',
+                        data: produto.precos,
+                        borderColor: '#0071e3',
+                        backgroundColor: 'rgba(0, 113, 227, 0.12)',
+                        borderWidth: 3,
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Preço: ' + formatarMoeda(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R$ ' + Number(value).toLocaleString('pt-BR');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

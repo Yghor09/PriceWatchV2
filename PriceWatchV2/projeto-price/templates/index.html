@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceWatch</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="page-shell">
+        <header class="page-header">
+            <button class="theme-toggle" onclick="alternarTema()">
+                Alternar tema
+            </button>
+
+            <div class="title-group">
+                <p class="eyebrow">Banco próprio</p>
+                <h1>PriceWatch</h1>
+                <p class="tagline">
+                    Produtos exibidos apenas após cadastro. Nenhuma busca externa é feita.
+                </p>
+            </div>
+        </header>
+
+        <section class="form-card">
+            <h2>Gerenciar produtos</h2>
+            <p class="tagline">
+                Cadastre um produto que já está salvo no banco para ele aparecer na home com preço atual,
+                maior preço, menor preço e histórico de Janeiro a Junho.
+            </p>
+
+            <a href="/novo-produto" class="add-product-link">
+                Cadastrar produto do banco
+            </a>
+        </section>
+
+        <section class="overview-grid">
+            <article class="overview-card">
+                <p class="small-label">Produtos na home</p>
+                <p class="big-value">{{ produto_count }}</p>
+                <p class="note">Quantidade de produtos cadastrados/ativados.</p>
+            </article>
+
+            <article class="overview-card">
+                <p class="small-label">Origem dos dados</p>
+                <p class="big-value">Local</p>
+                <p class="note">Todos os preços vêm do banco de dados da aplicação.</p>
+            </article>
+        </section>
+
+        <section class="products-card">
+            <h2>Produtos cadastrados</h2>
+
+            {% if produto_count == 0 %}
+                <section class="chart-card">
+                    <p class="empty-state">
+                        Nenhum produto cadastrado na home ainda. Clique em “Cadastrar produto do banco” para ativar um produto salvo no banco.
+                    </p>
+                </section>
+            {% else %}
+                <ul class="product-list">
+                    {% for produto in produtos %}
+                        <li class="product-card">
+                            <div class="product-card-header">
+                                <div class="product-info">
+                                    <span class="product-badge">{{ produto.site }}</span>
+                                    <p class="product-name">{{ produto.nome }}</p>
+
+                                    <a href="{{ produto.url }}" target="_blank" class="product-link">
+                                        Abrir link salvo
+                                    </a>
+                                </div>
+
+                                <div class="store-actions">
+                                    <a href="/historico/{{ produto.id }}" class="edit-btn">
+                                        Histórico
+                                    </a>
+
+                                    <a
+                                        href="/remover/{{ produto.id }}"
+                                        class="delete-btn"
+                                        onclick="return confirm('Deseja remover este produto da home? Ele continuará salvo no banco.')"
+                                    >
+                                        Remover da home
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="price-summary-grid">
+                                <div class="price-summary-card">
+                                    <span>Preço atual</span>
+                                    <strong>
+                                        {% if produto.preco_atual is not none %}
+                                            R$ {{ '%.2f' % produto.preco_atual }}
+                                        {% else %}
+                                            Sem preço
+                                        {% endif %}
+                                    </strong>
+                                </div>
+
+                                <div class="price-summary-card">
+                                    <span>Maior preço</span>
+                                    <strong>
+                                        {% if produto.maior_preco %}
+                                            R$ {{ '%.2f' % produto.maior_preco.preco }}
+                                        {% else %}
+                                            Sem preço
+                                        {% endif %}
+                                    </strong>
+                                </div>
+
+                                <div class="price-summary-card">
+                                    <span>Menor preço</span>
+                                    <strong>
+                                        {% if produto.menor_preco %}
+                                            R$ {{ '%.2f' % produto.menor_preco.preco }}
+                                        {% else %}
+                                            Sem preço
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                            </div>
+
+                            {% if produto.historico|length > 0 %}
+                                <div class="mini-chart-card">
+                                    <h3>Histórico de preço</h3>
+                                    <p class="chart-info">Janeiro a Junho + preço atual salvo no banco.</p>
+                                    <canvas id="graficoProduto{{ produto.id }}"></canvas>
+                                </div>
+                            {% else %}
+                                <p class="empty-state">Este produto ainda não tem histórico salvo no banco.</p>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </section>
+    </div>
+
+    <script>
+        const produtos = {{ produtos|tojson }};
+        const graficos = [];
+
+        function aplicarTemaSalvo() {
+            const temaSalvo = localStorage.getItem('tema');
+
+            if (temaSalvo === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        }
+
+        function corTextoGrafico() {
+            return document.body.classList.contains('dark-mode') ? '#facc15' : '#1f2933';
+        }
+
+        function corGridGrafico() {
+            return document.body.classList.contains('dark-mode') ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+        }
+
+        function formatarMoeda(valor) {
+            return 'R$ ' + Number(valor).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function criarGraficosProdutos() {
+            produtos.forEach(function(produto) {
+                const canvas = document.getElementById('graficoProduto' + produto.id);
+
+                if (!canvas || !produto.precos || produto.precos.length === 0) {
+                    return;
+                }
+
+                const grafico = new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: produto.labels,
+                        datasets: [{
+                            label: 'Preço no banco',
+                            data: produto.precos,
+                            borderColor: '#0071e3',
+                            backgroundColor: 'rgba(0, 113, 227, 0.12)',
+                            borderWidth: 3,
+                            tension: 0.35,
+                            fill: true,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: corTextoGrafico(),
+                                    font: { weight: 'bold' }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'Preço: ' + formatarMoeda(context.raw);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: corTextoGrafico(),
+                                    font: { weight: 'bold' }
+                                },
+                                grid: { color: corGridGrafico() }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                ticks: {
+                                    color: corTextoGrafico(),
+                                    callback: function(value) {
+                                        return 'R$ ' + Number(value).toLocaleString('pt-BR');
+                                    }
+                                },
+                                grid: { color: corGridGrafico() }
+                            }
+                        }
+                    }
+                });
+
+                graficos.push(grafico);
+            });
+        }
+
+        function atualizarCoresGraficos() {
+            graficos.forEach(function(grafico) {
+                const corTexto = corTextoGrafico();
+                const corGrid = corGridGrafico();
+
+                grafico.options.plugins.legend.labels.color = corTexto;
+                grafico.options.scales.x.ticks.color = corTexto;
+                grafico.options.scales.y.ticks.color = corTexto;
+                grafico.options.scales.x.grid.color = corGrid;
+                grafico.options.scales.y.grid.color = corGrid;
+                grafico.update();
+            });
+        }
+
+        function alternarTema() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('tema', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            atualizarCoresGraficos();
+        }
+
+        aplicarTemaSalvo();
+        criarGraficosProdutos();
+    </script>
+</body>
+
+</html>

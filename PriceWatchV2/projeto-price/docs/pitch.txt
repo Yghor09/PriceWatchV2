@@ -1,0 +1,14 @@
+PITCH - PRICEWATCH
+
+O PriceWatch é uma aplicação web simples para acompanhar produtos usando um banco de dados próprio.
+
+Nesta versão, a aplicação não busca mais produtos nem preços em sites externos. Os produtos ficam previamente salvos no banco SQLite local e o usuário apenas cadastra/ativa quais produtos deseja exibir na home.
+
+Fluxo principal:
+1. O produto fica guardado no banco de dados.
+2. O usuário acessa a tela de cadastro e escolhe um produto salvo no banco.
+3. Após cadastrar, o produto aparece na home.
+4. A home mostra preço atual, maior preço, menor preço e gráfico de histórico de Janeiro a Junho, incluindo o preço atual.
+5. Remover um produto da home não apaga o produto nem seu histórico do banco.
+
+A solução foi simplificada para trabalhar apenas com dados locais, tornando o sistema mais previsível, leve e fácil de manter.
