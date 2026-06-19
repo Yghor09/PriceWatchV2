@@ -155,7 +155,7 @@ def excluir(id):
 
 
 def obter_porta_padrao():
-    porta = os.getenv("PORT", "5005")
+    porta = os.getenv("PORT", "5000")
 
     try:
         porta = int(porta)
